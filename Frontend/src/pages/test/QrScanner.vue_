@@ -1,0 +1,83 @@
+<script lang="ts" setup>
+
+import QrScanner from "qr-scanner";
+
+// Props
+const props = withDefaults( defineProps<{
+  value: any;
+}>(), {} );
+
+// Data
+const isLoading = ref( false );
+
+// Mounted
+onMounted( async () => {
+  isLoading.value = true;
+  //
+  isLoading.value = false;
+} );
+
+// Events
+const emit = defineEmits<{
+  ( event: "update:value", val: any ): void;
+}>();
+
+
+const showScanner = ref( false );
+const scannerView = ref<HTMLVideoElement>();
+const scanResult = ref<any>( null );
+
+
+async function startScan(){
+  showScanner.value = true;
+  await nextTick();
+  setTimeout( () => {
+    if( !scannerView.value ) {
+      return;
+    }
+
+    const qrScanner = new QrScanner( scannerView.value, ( result ) => {
+      scanResult.value = result;
+      showScanner.value = true;
+      qrScanner.destroy();
+    }, {
+      returnDetailedScanResult : true,
+      onDecodeError( err ){
+        console.log( err );
+        qrScanner.destroy();
+      },
+    } );
+  } );
+}
+
+
+// Expose
+defineExpose( {} );
+
+
+</script>
+<template lang="pug">
+
+div
+  .btn(@click="startScan()")
+    i.fa.fa-tablet
+    i.fa.fa-arrow-left.mx-1
+    i.fa.fa-qrcode
+
+  ModalBox(
+    v-model:value="showScanner"
+  )
+    template(#default)
+      .square
+        video.w-100.h-100(
+          :width="200"
+          :height="200"
+          ref="scannerView"
+        ).bg-dark
+
+      pre {{ scanResult }}
+
+</template>
+<style lang="scss" scoped>
+
+</style>

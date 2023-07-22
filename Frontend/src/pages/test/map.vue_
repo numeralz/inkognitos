@@ -1,0 +1,67 @@
+<script lang="ts" setup>import { openErrorModal } from "../lib/utils";
+
+
+// Props
+const props = withDefaults( defineProps<{
+  value: any;
+}>(), {} );
+
+// Data
+const isLoading = ref( false );
+
+// Mounted
+onMounted( async () => {
+  isLoading.value = true;
+  //
+  isLoading.value = false;
+} );
+
+// Events
+const emit = defineEmits<{
+  ( event: "update:value", val: any ): void;
+}>();
+
+
+// Expose
+defineExpose( {} );
+
+function openItem(){
+  openErrorModal( "Account does not have insider access." );
+}
+
+</script>
+<template lang="pug">
+
+div
+  .py-5.bg-light
+    .container
+      .row.g-3
+        .col-md
+          .square.rect
+            .btn.btn-white.shadow-lg(
+              @click="openItem()"
+            )
+              .card-body
+                h1 Merch
+        .col-md
+          .square.rect
+            .btn.btn-primary.shadow-lg(
+              @click="openItem()"
+            )
+              .card-body
+                h1 Launchpad
+        .col-md
+          .square.rect
+            .btn.btn-primary.shadow-lg(
+              @click="openItem()"
+            )
+              .card-body
+                h1 Mission Control
+  .py-5.bg-dark
+    .container
+
+
+</template>
+<style lang="scss" scoped>
+
+</style>

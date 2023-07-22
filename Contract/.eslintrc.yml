@@ -1,0 +1,193 @@
+---
+env:
+  browser: false
+  es2021: true
+  node: true
+extends:
+  - eslint:recommended
+  - plugin:@typescript-eslint/recommended
+overrides:
+  - files:
+      - hardhat.config.js
+    globals:
+      task: true
+  - files:
+      - scripts/**
+    rules:
+      no-process-exit: 'off'
+  - files:
+      - hardhat.config.js
+      - scripts/**
+      - test/**
+    rules:
+      node/no-unpublished-require: 'off'
+parserOptions:
+  parser: '@typescript-eslint/parser'
+  sourceType: module
+plugins:
+  - '@typescript-eslint'
+rules:
+  '@typescript-eslint/indent':
+    - error
+    - 2
+    - ArrayExpression: 1
+      MemberExpression: 0
+      ObjectExpression: 1
+      SwitchCase: 0
+      flatTernaryExpressions: false
+  '@typescript-eslint/prefer-optional-chain':
+    - error
+  array-bracket-newline:
+    - error
+    - minItems: 1
+  array-bracket-spacing:
+    - error
+    - always
+  array-element-newline:
+    - error
+    - consistent
+  brace-style:
+    - error
+    - 1tbs
+    - allowSingleLine: true
+  camelcase:
+    - 'off'
+  class-methods-use-this:
+    - warn
+  comma-dangle:
+    - error
+    - arrays: always
+      exports: always-multiline
+      functions: never
+      imports: always-multiline
+      objects: always
+  comma-spacing:
+    - error
+    - after: true
+      before: false
+  complexity:
+    - error
+    - max: 10
+  consistent-return: 'off'
+  curly:
+    - error
+    - all
+  eqeqeq:
+    - error
+    - always
+  function-call-argument-newline:
+    - error
+    - consistent
+  function-paren-newline:
+    - error
+    - multiline-arguments
+  implicit-arrow-linebreak:
+    - error
+    - beside
+  indent:
+    - 'off'
+  key-spacing:
+    - error
+    - align: colon
+      beforeColon: true
+  lines-around-comment:
+    - error
+    - beforeBlockComment: false
+  lines-between-class-members:
+    - error
+    - always
+  max-len: 'off'
+  no-console:
+    - warn
+  no-mixed-operators:
+    - error
+    - groups:
+        - - '&&'
+          - '||'
+  no-multi-spaces:
+    - error
+    - exceptions:
+        VariableDeclarator: true
+  no-multiple-empty-lines:
+    - error
+    - max: 2
+  no-param-reassign:
+    - warn
+    - ignorePropertyModificationsFor:
+        - err
+        - obj
+        - pkg
+      props: true
+  no-restricted-syntax:
+    - error
+    - ForInStatement
+    - LabeledStatement
+    - WithStatement
+  no-trailing-spaces:
+    - error
+    - ignoreComments: true
+      skipBlankLines: true
+  no-undef:
+    - warn
+  no-underscore-dangle:
+    - off
+    - allowAfterThis: true
+  no-unsafe-optional-chaining:
+    - error
+    - disallowArithmeticOperators: true
+  no-unused-vars:
+    - warn
+    - args: after-used
+      vars: local
+  object-curly-newline:
+    - error
+    - ExportDeclaration: always
+      ImportDeclaration:
+        multiline: true
+      ObjectExpression:
+        consistent: true
+      ObjectPattern:
+        consistent: true
+  object-curly-spacing:
+    - error
+    - always
+  object-property-newline:
+    - error
+    - allowAllPropertiesOnSameLine: true
+  object-shorthand:
+    - error
+    - always
+  padded-blocks:
+    - error
+    - blocks: never
+      classes: never
+      switches: never
+  prefer-destructuring: 'off'
+  prefer-object-spread:
+    - error
+  prefer-template:
+    - error
+  quote-props:
+    - error
+    - consistent-as-needed
+  quotes:
+    - error
+    - double
+    - allowTemplateLiterals: true
+  require-await:
+    - warn
+  semi:
+    - error
+    - always
+  space-in-parens:
+    - error
+    - always
+    - exceptions:
+        - empty
+  space-infix-ops:
+    - error
+    - int32Hint: false
+  strict: 'off'
+  template-curly-spacing:
+    - error
+    - always

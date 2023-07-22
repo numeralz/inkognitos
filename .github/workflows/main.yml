@@ -1,0 +1,68 @@
+
+name: Deploy
+
+on:
+  push:
+    branches: [ stage, main ]
+
+jobs:
+  build-stage:
+    if: github.ref == 'refs/heads/stage' && contains(github.event.head_commit.message, '#deploy')
+    runs-on: node
+    steps:
+      - name: Install SSH key...
+        uses: shimataro/ssh-key-action@v2
+        with:
+          if_key_exists: replace
+          # ssh-keygen -C "" -P "" -t ed25519 -f __key
+          # PUBKEY=$(cat __key.pub)
+          # ssh -t ink.test "echo -e \"\\n$PUBKEY\\n\" >> /home/ubuntu/.ssh/authorized_keys"
+          # ssh -t ink.test "cat /home/ubuntu/.ssh/authorized_keys"
+          # ssh -i __key.pub ink.test 
+          # cat __key
+          # rm __key.pub __key
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          name: deploy-ssh-key
+          # ssh-keyscan -H 54.82.133.172
+          known_hosts: |
+            |1|7Qc8a/FjjkzN/28ZpWarqTbY3Cc=|7Oya8Ns/hpNVKLXfn2UgS8ABc4Y= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIxpg8/oIpUOG/nUZQ133CF5h6/+JMRvZERaqo+2UMZJ          
+          config: |
+            Host ink.test
+              HostName                  54.82.133.172
+              PreferredAuthentications  publickey
+              IdentityFile              ~/.ssh/deploy-ssh-key
+              User                      ubuntu
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Deploy >> STAGE
+        env:
+          S3_KEY_ID: ${{ secrets.S3_KEY_ID }}
+          S3_KEY_SECRET: ${{ secrets.S3_KEY_SECRET }}
+        run: yarn deploy -e test all:build,run
+
+  build-main:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '#deploy')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key...
+        uses: shimataro/ssh-key-action@v2
+        with:
+          if_key_exists: replace
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          name: deploy-ssh-key
+          known_hosts: |
+            |1|7Qc8a/FjjkzN/28ZpWarqTbY3Cc=|7Oya8Ns/hpNVKLXfn2UgS8ABc4Y= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIxpg8/oIpUOG/nUZQ133CF5h6/+JMRvZERaqo+2UMZJ          
+          config: |
+            Host ink.prod
+              HostName                  3.238.171.200
+              PreferredAuthentications  publickey
+              IdentityFile              ~/.ssh/deploy-ssh-key
+              User                      ubuntu
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Deploy >> PRODUCTION
+        env:
+          S3_KEY_ID: ${{secrets.S3_KEY_ID}}
+          S3_KEY_SECRET: ${{secrets.S3_KEY_SECRET}}
+        run: yarn deploy -e test all:build,run
+

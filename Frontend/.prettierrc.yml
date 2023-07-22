@@ -1,0 +1,13 @@
+plugins:
+  - '@prettier/plugin-pug'
+pugAttributeSeparator: none
+pugBracketSameLine: true
+pugClassLocation: before-attributes
+pugClassNotation: literal
+pugExplicitDiv: false
+pugFramework: vue
+pugIndentSize: 2
+pugSemi: false
+pugSingleQuote: false
+pugSortAttributes: asc
+pugWrapAttributesThreshold: 1

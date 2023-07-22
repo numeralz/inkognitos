@@ -1,0 +1,623 @@
+<script lang="ts" setup>
+import { abbreviateNumber, format, openErrorModal, parseErrorMessage } from "$/lib/utils";
+import type { ColorToken } from "$/store/session";
+import userStore, { getInkContract } from "$/store/session";
+import { isClient } from "@vueuse/core";
+import { BigNumber } from "ethers";
+
+
+const {
+  selectedAddress,
+  inkColors,
+  provider,
+  hasSession,
+  user,
+} = userStore.getState();
+
+const emit = defineEmits<{
+  ( event: "done" ): void;
+}>();
+
+const state = reactive<{
+  metadata: any;
+  qty: number;
+  name: string;
+  symbol: string;
+  gasPrice: BigNumber;
+  ethBalance: BigNumber;
+  mintStartTime: Date;
+  activeOption: any;
+  mintForAddress: string;
+  final: any;
+  activeItem?: ColorToken|null;
+  isGift: boolean;
+}>( {
+  metadata       : {} as any,
+  qty            : 1,
+  name           : "",
+  symbol         : "",
+  gasPrice       : BigNumber.from( 0 ),
+  ethBalance     : BigNumber.from( 0 ),
+  mintStartTime  : new Date(),
+  activeOption   : null as any,
+  final          : null as any,
+  mintForAddress : "",
+  isGift         : false,
+} );
+
+const options = ref<any[]>( [] );
+
+async function updateStats() {
+  console.log( "updateStats" );
+  provider.value?.getSigner().getBalance().then( ( val ) => {
+    state.ethBalance = val;
+  } ).catch( () => {
+    state.ethBalance = BigNumber.from( 0 );
+  } );
+  provider.value?.getSigner().getGasPrice().then( ( val ) => {
+    state.gasPrice = val;
+  } ).catch( () => {
+    state.gasPrice = BigNumber.from( 0 );
+  } );
+}
+
+const dreamersInkAddress = asyncComputed( async () => {
+  try {
+    return ( await getInkContract() )?.address;
+  } catch ( e ) {
+    return "";
+  }
+} );
+
+
+async function loadToken( token?: ColorToken ) {
+  // state.activeItem = null;
+  if( !isClient ){
+    return;
+  }
+
+  console.log( "loadToken", token );
+  options.value = [];
+
+  const $Ink = await getInkContract();
+
+  if ( !$Ink ) {
+    console.log( "No Ink" );
+    
+    return;
+  }
+  
+
+  if( token ){
+    state.activeItem = token;
+    console.log( {
+      token,
+    } );
+  }
+
+  if( !state.activeItem ){
+    console.log( "No id" );
+    console.log( state.activeItem );
+    
+
+    return;
+  }
+
+
+  
+  const tokenId =  state.activeItem?.tokenId;
+
+  try{
+    const tokenUri = await $Ink.callStatic.tokenURI( tokenId );
+
+    console.log( "tokenURI", tokenUri );
+
+    const base64String = tokenUri.slice( 29 );
+    const jsonString = window?.atob( base64String );
+    const metadata = JSON.parse( jsonString );
+
+    state.metadata = metadata;
+    state.activeItem!.maxSupply = await $Ink.callStatic.maxSupply( tokenId );
+    state.activeItem!.totalSupply = await $Ink.callStatic.totalSupply( tokenId );
+
+    const mintMaxCount = await $Ink.callStatic.mintMaxCount();
+
+    console.log( mintMaxCount );
+    options.value = [];
+    
+    const {
+      totalSupply, maxSupply, unitPrice,
+    } = state.activeItem;
+    
+    /* List all purchase options */
+
+
+    for ( let qty = 1; mintMaxCount.gte( qty ); qty += 1 ) {
+      if ( totalSupply?.add( qty || 0 ).gte( maxSupply || 0 ) ) {
+        break;
+      }
+
+      ( async () => {
+        // const subtotal = await $Ink.callStatic.mintPrice(
+        //   tokenId,
+        //   qty
+        // );
+        const subtotal = unitPrice?.mul( qty ) || BigNumber.from( 0 );
+
+        // const gasUnits = await $Ink.estimateGas.mintMany?.(
+        //   selectedAddress.value,
+        //   [
+        //     tokenId,
+        //   ],
+        //   [
+        //     qty,
+        //   ],
+        //   {
+        //     value : subtotal,
+        //   }
+        // );
+
+        // const gasCost = gasUnits.mul( state.gasPrice );
+
+        options.value[qty - 1] = {
+          qty,
+          color : state.activeItem!.color,
+          tokenId,
+          // gasUnits,
+          // gasCost,
+          subtotal,
+          // total : subtotal.add( gasCost ),
+        } ;
+      } )().then();
+    }
+  }catch( err ){
+    console.log( "No metadata" );
+    state.metadata = {};
+  }
+}
+
+
+// Mounted
+onMounted( async () => {
+  if( !user.value?.address ){
+    await userStore.start( true );
+  }
+
+  await loadToken( inkColors.value[1] );
+  updateStats().then( () => {
+    //
+  } );
+  getInkContract().then( ( _inkContract ) => {
+    if ( !_inkContract ) {
+      openErrorModal( "Network issue or wrong chain." );
+
+      return;
+    }
+
+    _inkContract.callStatic.name().then( ( val ) => {
+      state.name = val;
+    } );
+    _inkContract.callStatic.symbol().then( ( val ) => {
+      state.symbol = val;
+    } );
+    _inkContract.callStatic.mintStartTime().then( ( val ) => {
+      state.mintStartTime = new Date( val.mul( 1000 ).toNumber() );
+    } );
+  } );
+} );
+
+async function openOption( item: any ){
+  state.activeOption = item;
+  state.final = null;
+  
+  if( !state.mintForAddress ){
+    state.mintForAddress = selectedAddress.value;
+  }
+}
+
+const mintActive = ref( false );
+
+/* Select item to mint */
+async function beginMintItem( item: any ) {
+  const signer = provider.value?.getSigner();
+  const inkContract = await getInkContract();
+
+
+  if( !inkContract || !signer )  {
+    console.log( "No ink contract" );
+    
+    return;
+  }
+
+  let txn;
+
+  mintActive.value = true;
+
+  try {
+    /* Mint Begins */
+    txn = await inkContract.mintMany(
+      state.mintForAddress || selectedAddress.value,
+      [
+        item.tokenId,
+      ],
+      [
+        item.qty,
+      ],
+      {
+        value : item.subtotal,
+      }
+    );
+    state.final = {
+      done : false,
+    };
+  } catch ( err:any ) {
+    mintActive.value = false;
+    state.activeOption = null;
+    state.final = null;
+    await openErrorModal( "Problem", parseErrorMessage( err ) );
+
+    return;
+  }
+
+  const receipt = await txn.wait( 1 );
+  
+  state.final = {
+    ...state.final,
+    txn  : receipt,
+    done : true,
+  };
+  await updateStats();
+  await loadToken( state.activeItem! );
+  await userStore.loadInkBalances();
+
+  // provider.value?.once( "block", async ( block: any ) => {
+  //   const receipt1 = await provider.value!.getTransactionReceipt( receipt.transactionHash );
+
+  //   state.final = {
+  //     ...state.final,
+  //     txn  : receipt1,
+  //     done : true,
+  //   };
+  //   await updateStats();
+  //   await loadToken( state.activeItem! );
+  //   await userStore.loadInkBalances();
+  // } );
+  state.final = {
+    ...state.final,
+    txn : receipt,
+  };
+  mintActive.value = false;
+}
+
+onBeforeUnmount( () => {
+  // provider.value?.removeAllListeners();
+} );
+
+const isSoldOut = computed( () => {
+  try{
+    if ( !( state.activeItem?.maxSupply || state.activeItem?.totalSupply ) ) {
+      return false;
+    }
+
+    if ( state.activeItem.totalSupply?.gte?.( state.activeItem.maxSupply || 0 ) ) {
+      return true;
+    }
+  }catch( err ){
+    // 
+  }
+
+  return false;
+} );
+
+const waitingForSignature = computed( () => {
+  return state.activeOption && !state.final;
+} );
+
+const waitingForNetwork = computed( () => {
+  return state.final && !state.final?.done;
+} );
+
+const txnComplete = computed( () => {
+  return state.final?.done;
+} );
+
+function dismiss( close?: boolean ) {
+  mintActive.value = false;
+  state.activeOption = null;
+  state.final = null;
+
+  if ( close ) {
+    emit( "done" );
+  }
+}
+
+
+</script>
+<template lang="pug">
+div
+  .modal-body
+    .row.g-3
+      .col-12
+        .striped.bg-white.striped-dark.p-3.mx-n3
+          .row.g-1
+            template(
+              v-for="(item,i) in Object.values(inkColors)",
+            )
+              .col-auto(
+                v-if="item && item?.maxSupply?.gt(0)"
+                :style="`--delay:${i*0.3}; max-width: 10rem; min-width: 4rem;`"
+              ).appear
+                .square.card.btn.p-0.border-2.border-white(
+                  :key="item.tokenId",
+                  @click="loadToken(item)",
+                  :class="{ 'border-black': item.tokenId === state.activeItem?.tokenId }"
+                  :style="{ 'backgroundColor': item.color}"
+                )
+                  .inner.text-white.align-items-center.justify-content-center.d-flex
+                    i.fa {{item.tokenId }}
+              
+      .col-12
+        .row.g-3(v-if="state.activeItem")
+
+          .col-md-3(v-if="state.metadata?.image")
+            LoadImage.square(:src="state.metadata.image")
+
+          .col.text-nowrap.appear
+            .row.g-2
+              .col-12
+                h2.monospace INK \#{{ state.activeItem?.tokenId }}
+                | #[strong Color:] #[span.monospace {{state.activeItem?.color}}]
+
+              .col-12.appear(
+                v-if="state.activeItem?.totalSupply && state.activeItem?.maxSupply"
+              )
+                .progress(
+                  v-if="state.activeItem?.maxSupply?.gt(0)"
+                )
+                  .progress-bar.bg-dark(
+                    :style="`width: ${Math.round(100 - state.activeItem?.totalSupply.mul(100).div(state.activeItem.maxSupply).toNumber())}%`"
+                  )
+                  
+              .col-12
+                .row
+                  .col
+                    .py-1: .row
+                      .col-12
+                        strong
+                          NumberTicker(
+                            :value="state.activeItem?.maxSupply?.sub(state.activeItem?.totalSupply||0).toNumber()||0",
+                          )
+                      .col: small Available
+                  .col.text-end.faded
+                    .py-1: .row
+                      .col-12: strong {{ abbreviateNumber(state.activeItem?.maxSupply?.toNumber()||0) }}
+                      .col: small Maximum
+
+        
+              .col-12
+                hr.mt-0
+                
+                .row.justify-content-between
+                  .col-auto
+                    a.btn.appear(
+                      :href="`https://opensea.io/assets/${dreamersInkAddress}/${state.activeItem?.tokenId}`",
+                      target="_blank",
+                      :style="`--delay:${1}`"
+                    )
+                      .square.bg-light(
+                        style="width: 1.5em;"
+                      )
+                        img.inner(
+                          src="https://opensea.io/static/images/logos/opensea.svg",
+                        )
+
+                  .col-auto
+                    a.btn.appear(
+                      :href="`https://etherscan.io/address/${dreamersInkAddress}`",
+                      target="_blank",
+                      :style="`--delay:${2}`"
+                    )
+                      .square.bg-light(
+                        style="width: 1.5em;"
+                      )
+                        img.inner(
+                          src="https://etherscan.com/images/favicon3.ico",
+                          style="filter: contrast(2)"
+                        )
+
+                  .col-auto
+                    AddTokenButton.appear(
+                      :address="dreamersInkAddress",
+                      :symbol="state.symbol",
+                      :decimals="2",
+                      :style="`--delay:${3}`"
+                    )
+                      .square.bg-light(
+                        style="width: 1.5em;"
+                      )
+                        img.inner(
+                          src="https://docs.metamask.io/metamask-fox.svg",
+                          style="filter: contrast(2)"
+                        )
+
+  .modal-body(v-if="state.activeItem")
+    .px-3.row.border-bottom
+      .col: h5.text Quantity
+      strong.col-auto Price
+
+    .scroll-y(style="min-height: 25vh")
+      .list-group.list-group-flush
+        template(v-for="(item,i) in options")
+          .list-group-item.list-group-item-action(
+            v-if="item"
+            :key="item.qty"
+            @click.stop="openOption(item)"
+            :class="[!state.ethBalance || item?.total?.gt(state.ethBalance || 0) ? 'faded disabled text-muted' : 'cursor-pointer', state.activeOption === item ? 'active' : '']",
+            :style="`--delay:${i*0.5}`"
+          ).appear
+            .row.g-3.align-items-center
+              .col-auto
+                .row.g-2.align-items-center
+                  .col-auto
+                    .square(style="width:2em" :style="{ backgroundColor: state.activeItem?.color }").rounded.border.d-flex.align-items-center.shadow.border.border-black
+                      i.fa.fa-tint.fa-inverse.w-100.text-center.my-1
+                  .col-auto.text-center(title="INK Qty")
+                    span.monospace #[span {{ item?.qty*100 }}]
+
+              .col.text-end
+
+              .col-auto.text-danger(
+                v-if="!state.ethBalance || item.total?.gt(state.ethBalance || 0)"
+              )
+                | #[i.fa.fa-fw.fa-exclamation-triangle] Insuff
+              .col-auto.monospace
+                | #[span Ξ]{{ format(item.subtotal) }}
+
+  .alert.alert-light(v-else) #[i.fa.fa-circle-notch.fa-xl.fa-spin]
+      
+  Teleport(to="#modals")
+    ModalBox(v-if="state.activeOption" :value="state.activeOption" @close="state.activeOption=null")
+      template(#header)
+        .row.align-items-center
+          .col
+            h5.m-0 Mint #[strong {{ state.symbol }}]
+
+      template(#default)
+        .modal-body.p-0
+          .card-body
+            .row.g-1.align-items-center
+              .col.text-center
+                h3.m-0 Ink \#{{ state.activeItem?.tokenId }}
+
+              .col-auto
+                .square.rounded-circle(:style="{ width: '5em', 'backgroundColor': state.activeItem?.color }").shadow.border.border-2.border-white
+                  .inner.d-flex
+                    i.fa.fa-tint.fa-2x.text-white.align-self-center.text-center.w-100
+              .col.text-center
+                h5.m-0.monospace #[strong {{ state.activeItem?.color }}]
+                    
+          .card-body(:class="(state.final || mintActive)? 'faded' : ''").px-0
+            .list-group.list-group-flush
+              .list-group-item
+                .row.align-items-center.g-2
+                  .col Quantity:
+                  small.col.text-end.monospace
+                    | ({{ state.activeOption.qty }} #[i.fa.fa-times] 100 INK)
+                  .col-sm.text-end.monospace: strong {{ state.activeOption.qty*100 }} INK
+                
+              .list-group-item.bg-light1.lead
+                .row.align-items-center
+                  .col: strong Total
+                  .col.monospace.text-end: strong #[span Ξ]#[strong {{ format(state.activeOption.subtotal, "ether", 4) }}]
+
+          template(
+            v-if="!mintActive && !state.final"
+          )
+            form(@submit.prevent="()=>false").card-body.bg-light1
+              label Receiving Wallet
+              .d-flex.flex-nowrap.justify-content-between.my-2
+                .pe-2
+                  JazzIcon(
+                    noLabel
+                    :address="state.mintForAddress"
+                    :me="selectedAddress"
+                  )
+
+                .input-group
+                  input.input.form-control.monospace(
+                    v-model="state.mintForAddress"
+                  )
+                  button.input-group-append.btn.border-dark(
+                    :class="{disabled: (state.mintForAddress === selectedAddress)}"
+                    @click="state.mintForAddress = selectedAddress"
+                  ) Myself
+
+            .list-group-item.list-group-item-action(
+              @click="beginMintItem(state.activeOption)"
+            ).text-center.bg-success.py-3
+              .lead Continue #[i.fa.fa-arrow-right]
+
+          .card-body(v-if="mintActive || state.final")
+            .card.shadow
+              .card-body(
+                :class="{ \
+                  'striped-dark animated': waitingForNetwork || waitingForSignature, \
+                  'text-white bg-success': txnComplete, \
+                  'text-white bg-info': waitingForNetwork, \
+                  'text-white bg-warning': waitingForSignature }"
+              ).overflow-x-hidden
+                .row.align-items-center.text-start
+                  .col-2.text-center
+                    Transition(mode="out-in", name="slide")
+                      span(v-if="waitingForSignature")
+                        |#[i.fa.fa-fw.fa-circle-notch.fa-spin.fa-xl]
+                      span(v-else-if="waitingForNetwork")
+                        |#[i.far.fa-fw.fa-clock.fa-spin.fa-xl]
+                      span(v-else-if="txnComplete")
+                        |#[i.fa.fa-fw.fa-check.fa-xl]
+
+                  .col
+                    Transition(mode="out-in", name="fade")
+                      span(v-if="waitingForSignature")
+                        | Waiting for your confirmation...
+                      span(v-else-if="waitingForNetwork")
+                        | Waiting for network confirmation...
+                      span(v-else-if="txnComplete")
+                        | Completed
+
+                  .col-auto(v-if="state.final?.txn").appear
+                    a.btn.text-white.border-white(
+                      :href="`https://etherscan.io/tx/${state.final.txn?.transactionHash}`",
+                      target="_blank"
+                    )
+                      img.mx-2(
+                        src="https://etherscan.com/images/favicon3.ico",
+                        style="width: 1.1em; filter: brightness(10)"
+                      )
+                      | View
+                      i.fa.fa-external-link-alt.fa-fw.ml-2.align-self-center.faded
+
+        .modal-footer(v-if="txnComplete").row.g-1
+          .col
+            .btn.btn-outline-dark(@click="dismiss()")
+              | #[i.fa.fa-fw.fa-chevron-left] Ink Shop
+
+          .col-auto
+            RouterLink.btn.btn-light(to="/account/" @click="dismiss(true)")
+              | Wallet #[i.fa.fa-fw.fa-wallet]
+
+          //- .col-auto
+            RouterLink.btn.btn-primary(to="/artboard" @click="dismiss(true)")
+              | Studio #[i.fa.fa-fw.fa-arrow-right]
+</template>
+<style lang="scss" scoped>
+table {
+  td {
+    vertical-align: middle;
+  }
+}
+.bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+// input {
+//   font-size: 2rem;
+//   text-align: center;
+// }
+table {
+  td,
+  th {
+    text-align: center;
+  }
+  td {
+    padding: 1rem 0.5rem;
+  }
+}
+</style>

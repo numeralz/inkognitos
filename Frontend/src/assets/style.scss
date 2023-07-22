@@ -1,0 +1,144 @@
+// @import "./theme";
+// @import "~bootstrap/scss/bootstrap";
+// @import "./common";
+// @import "./reset.scss";
+// @import "./common.scss";
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Chau+Philomene+One&display=swap');
+
+
+
+html,
+body {
+  font-kerning: normal !important;
+  min-height: 100vh;
+  height: 100%;
+
+  image-rendering: crisp-edges;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  width: 100vw;
+}
+
+
+.pixelated{
+  image-rendering: pixelated;
+  filter: contrast(3) saturate(0.8);
+}
+
+.cursive {
+  font-family: 'Chau Philomene One', sans-serif;
+}
+
+// .rotate-45 {
+//   transform: rotate(45deg);
+// }
+
+// .rotate-180 {
+//   transform: rotate(180deg);
+// }
+
+// .rotate-225 {
+//   transform: rotate(225deg);
+// }
+
+// .rotate-135 {
+//   transform: rotate(135deg);
+// }
+@for $i from 0 through 8 {
+  .rotate-#{$i * 45} {
+    transform: rotate(#{$i * 45}deg);
+  }
+}
+
+
+
+.bg-dark,
+.bg-success {
+  color: white;
+
+  .display-1 {
+    color: white;
+  }
+}
+
+.bg-white,
+.bg-light {
+  color: $body-color;
+}
+
+.list-group-item {
+  transition: background-color 0.3s ease-out;
+}
+
+.bg-zoom {
+  background-size: 166%;
+  // shape-rendering: geometricPrecision;
+  background-position: 50%;
+}
+
+.markdown {
+  @for $var from 1 to 6 {
+    h#{$var} {
+      font-family: "Roboto", sans-serif !important;
+      font-size: 0.9rem + 0.25rem * math.div(6, $var) !important;
+      color: darken(desaturate(teal, math.div(100%, $var)),
+          math.div(10%, $var));
+      margin-top: 1rem;
+    }
+  }
+
+  h1 {
+    border-bottom: $border-width solid $border-color;
+  }
+
+  font-family: "Roboto",
+  sans-serif;
+  font-size: $font-size-base;
+}
+
+.card-list {
+  .card {
+    background: hsl(0, 0%, 98%);
+    margin-bottom: $spacer * 0.25;
+
+    &:last-child {
+      margin-bottom: initial;
+    }
+  }
+}
+
+hr {
+  border-bottom: 1px solid $body-color;
+}
+
+
+.monospace {
+  font-family: $font-family-monospace;
+  letter-spacing: 0 !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  display: block;
+  margin: 0.5em 0;
+  line-height: 1em;
+  vertical-align: middle;
+  &:only-child, &:last-child{
+    // margin-bottom: 0;
+  }
+}
+
+.shadow-inset {
+  box-shadow: $box-shadow-inset;
+}
+
+.nav-link {
+  white-space: nowrap;
+}

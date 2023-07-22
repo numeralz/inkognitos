@@ -1,0 +1,22 @@
+**/node_modules
+secrets.env
+secrets.json
+.tmp
+**/*.log
+**/.lh
+openzeppelin-contracts
+.vscode
+.devcontainer
+
+# Docker
+*compose.*.yml
+!*compose.dev.yml
+
+#Env
+.env.*
+
+#Backend
+Backend
+
+Contract/deployed
+Backend/deployed

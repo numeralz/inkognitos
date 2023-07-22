@@ -1,0 +1,17 @@
+/*.env*
+/secrets.json
+/.git*
+/.vscode
+/*.log
+/.lh
+/**/node_modules
+/package.json
+/.devcontainer
+/mongo-dump
+/Game
+/utilities
+/IPFS
+/Artwork
+/*.code-workspace
+/docker-compose*yml
+/Backend

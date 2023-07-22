@@ -1,0 +1,23 @@
+{
+  "name": "artwork",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tsconfig/node16": "^1.0.2",
+    "@types/minimist": "^1.2.2",
+    "@types/node": "v16",
+    "tslib": "^2.3.1"
+  },
+  "description": "",
+  "dependencies": {
+    "axios": "^0.25.0",
+    "minimist": "^1.2.5",
+    "typescript": "^4.5.5"
+  }
+}

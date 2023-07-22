@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "target": "ES2017",
+    "lib": [
+      "esnext",
+      "ES2015",
+      "ES2017",
+      "DOM",
+      "DOM.Iterable",
+      "es2020"
+    ],
+    "paths": {
+      "~/*": [
+        "src/*"
+      ]
+    },
+    "types": [
+      "node",
+      "mocha"
+    ],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "noImplicitAny": false,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "noErrorTruncation": true,
+    "noStrictGenericChecks": false,
+    "strictNullChecks": false
+  },
+  "exclude": ["./dist", "./node_modules"],
+  "files": ["hardhat.config.ts"],
+  "include": [
+    "./*.json",
+    "./scripts/*",
+    "./test/*",
+    "./typechain/**/*",
+    "./utils/utils.ts",
+    "./tasks/*",
+    "./deploy/*",
+  ],
+  "compileOnSave": true
+}

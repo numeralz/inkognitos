@@ -1,0 +1,479 @@
+<!-- <script lang="ts" setup>
+
+import { setMeta } from "$/lib/meta";
+import type { TokenItem } from "$/store/wallet";
+import userStore, { useContract } from "$/store/wallet";
+import { BigNumber, Contract } from "ethers";
+
+let contract: null | Contract = null;
+
+setMeta( {
+  page        : "Gallery",
+  title       : "NiftyDreamers",
+  description : "A Collection for NiftyDreamers",
+  image       : "/blank.png",
+} );
+
+const router = useRouter();
+const route = useRoute();
+const perPage = 12 * 2;
+const currentPage = ( Number( route.query?.page ) || 1 ) - 1;
+
+const categories: Record<string, any> = {
+  all : {
+    name  : "All",
+    desc  : "Explore the full collection",
+    count : () => asyncComputed( async () => {
+      return <BigNumber>await contract?.callStatic.totalSupply();
+    } ),
+    async load() {
+      // const totalItems =  await contract?.callStatic.totalSupply() as BigNumber;
+      // if( !totalItems?.gt( 0 ) ) {
+      //   return;
+      // }
+      // const from = ( currentPage * perPage ) || 0;
+      // let i = BigNumber.from( from );
+      // // let stop = false;
+      // let safeStop = 1000;
+      // while( i.lt( totalItems ) ){
+      //   console.log( `load token ${i.toNumber()}` );
+      //   const tokenId = await contract?.callStatic?.tokenByIndex?.( i ) as BigNumber;
+      //   if( tokenId ){
+      //     const tokenItem = {
+      //       ...( await userStore.getToken( contract?.address, tokenId.toString() ) ),
+      //       index : i.toNumber(),
+      //     };
+      //     await handleItem( {
+      //       item  : tokenItem,
+      //       total : totalItems.toNumber(),
+      //     } );
+      //     i = i.add( 1 );
+      //   }
+      // }
+    },
+  },
+  owned : {
+    name  : "Owned",
+    desc  : "Tokens that you own.",
+    count : () => asyncComputed( async () => {
+      return <BigNumber>(
+          await contract?.callStatic.balanceOf(
+            userStore.getState().selectedAddress
+          )
+        );
+    } ),
+    async load() {
+      if ( !contract?.address ) {
+        return;
+      }
+
+      const addr = userStore.getState().selectedAddress;
+      let totalItems;
+
+      try {
+        totalItems = ( await contract?.callStatic.balanceOf( addr ) ) as BigNumber;
+      } catch ( error ) {
+        console.log( error );
+
+        return;
+      }
+
+      const from = currentPage * perPage || 0;
+      let i = BigNumber.from( from );
+
+      while ( i.lt( totalItems ) ) {
+        console.log( `load token ${i.toNumber()}` );
+
+        const tokenId = ( await contract?.callStatic.tokenOfOwnerByIndex(
+          addr,
+          i
+        ) ) as BigNumber;
+
+        const tokenItem = {
+          // ...( await userStore.getToken( contract?.address, tokenId.toString() ) ),
+          index : i.toNumber(),
+        };
+
+        await handleItem( {
+          item  : tokenItem,
+          total : totalItems.toNumber(),
+        } );
+        i = i.add( 1 );
+      }
+    },
+  },
+  created : {
+    name : "Created",
+    desc : "Tokens that you published.",
+    async load() {
+      //
+    },
+  },
+  sale : {
+    name : "Sale",
+    desc : "Tokens listed for sale.",
+    async load() {
+      //
+    },
+  },
+};
+
+interface State {
+  isLoading: boolean;
+  pendingCount: number;
+  totalSupply: BigNumber;
+  myBalance: BigNumber;
+  doneCount: number;
+  items: any[];
+  cat: string;
+  activeToken: null | TokenItem;
+}
+
+const state = reactive<State>( {
+  isLoading    : false,
+  totalSupply  : BigNumber.from( 0 ),
+  myBalance    : BigNumber.from( 0 ),
+  pendingCount : 0,
+  doneCount    : 0,
+  items        : [],
+  cat          : String( route.query.cat || "all" ),
+  activeToken  : null,
+} );
+
+interface Filters {
+  own: boolean;
+  author: boolean;
+  sale: boolean;
+}
+
+const filters = reactive<Filters>(
+  route.query.filters ? <any>route.query.filters : {}
+);
+
+const numPages = computed( () => {
+  return Math.ceil( state.totalSupply.div( perPage ).toNumber() );
+} );
+
+const showPages = computed( () => {
+  const currPage = currentPage;
+  const min = Math.max( currPage - 1, 0 );
+  const max = Math.min( currPage + 1, numPages.value );
+
+  const pages = [
+    currPage,
+  ];
+
+  let MIN = currPage;
+  let MAX = currPage;
+
+  for ( let i = 0; i < 6; i++ ) {
+    const base = Math.pow( 10, i );
+    const num = Math.ceil( currPage / base ) * base;
+
+    if ( num + base <= numPages.value ) {
+      pages.push( ( MAX = num + base ) );
+    }
+
+    if ( num - base > 1 ) {
+      pages.unshift( ( MIN = num - base ) );
+    }
+  }
+
+  if ( MIN > 0 ) {
+    pages.unshift( 0 );
+  }
+
+  if ( MAX < numPages.value ) {
+    pages.push( numPages.value + 1 );
+  }
+
+  return {
+    min,
+    max,
+    last : numPages.value,
+    pages,
+  };
+} );
+
+function handleItem( {
+  item, total,
+}: { item: TokenItem; total: number } ) {
+  return new Promise( ( res ) => {
+    nextTick().then( async () => {
+      const skip = currentPage * perPage;
+
+      state.pendingCount = Math.min( total - skip, perPage );
+
+      if ( !state.isLoading ) {
+        return res( true );
+      }
+
+      state.doneCount++;
+      state.items.push( item );
+
+      if ( state.items.length >= state.pendingCount ) {
+        state.isLoading = false;
+
+        return res( true );
+      }
+
+      if ( state.items.length >= total ) {
+        state.isLoading = false;
+
+        return res( true );
+      }
+
+      return res( false );
+    } );
+  } );
+}
+
+async function loadItems() {
+  if ( !userStore.getState().selectedAddress ) {
+    return;
+  }
+
+  const from = currentPage * perPage;
+  const to = ( currentPage + 1 ) * perPage;
+  const total = to - from;
+
+  state.pendingCount = total;
+  state.doneCount = 0;
+  state.isLoading = true;
+
+  const loader = categories[state.cat]?.load;
+
+  if ( loader ) {
+    await loader();
+  }
+}
+
+let stopWatcher = watchEffect(
+  () => {
+    if ( filters.own ) {
+      state.items.splice( 0 );
+      router.replace( {
+        query : {
+          ...route.query,
+          page : 1,
+        },
+      } );
+    }
+
+    state.isLoading = false;
+    window.setTimeout( async () => {
+      await loadItems();
+    }, 100 );
+  },
+  {
+    flush : "post",
+  }
+);
+
+onMounted( async () => {
+  await userStore.start();
+  contract = await useContract( userStore.getState().contracts.DreamersInk );
+  state.totalSupply = ( await contract?.callStatic.totalSupply() ) as BigNumber;
+  state.myBalance = ( await contract?.callStatic.balanceOf(
+    userStore.getState().selectedAddress
+  ) ) as BigNumber;
+
+  const tokenId = String( route.query.tokenId || window.location.hash.slice( 1 ) );
+
+  if ( tokenId ) {
+    await openItem( tokenId );
+  }
+} );
+onBeforeUnmount( async () => {
+  stopWatcher?.();
+} );
+
+function likeItem( item: TokenItem ) {
+  item.likes = ( Number( item.likes ) || 0 ) + 1;
+}
+
+async function openItem( tokenId: string ) {
+  if ( !contract?.address ) {
+    return;
+  }
+
+  state.activeToken = await userStore.getToken( contract?.address, tokenId );
+  history.pushState( {}, "", `#${tokenId}` );
+}
+
+function clearItem() {
+  history.pushState( {}, "", window.location.href.split( "#" )[0] );
+  state.activeToken = null;
+}
+
+function setFilters( filters: Record<string, boolean> ) {
+  router.replace( {
+    query : {
+      ...route.query,
+      filters : {
+        ...( <any>route.query.filters || {} ),
+        ...filters,
+      },
+    },
+  } );
+}
+
+function setCat( cat: string ) {
+  router.replace( {
+    query : {
+      ...route.query,
+      page : 1,
+      cat,
+    },
+  } );
+}
+
+const WINDOW = window;
+const showMenu = ref( false );
+</script>
+<template lang="pug">
+.page
+  .bg-info
+    .container.py-4
+      .row.g-3.align-items-center
+        .col-auto
+          Sticky
+            HamburgerButton(v-model:value="showMenu")
+        .col-auto
+          h1.m-0 Gallery
+        .col
+          .appear(v-if="categories[state.cat]")
+            h1.m-0.faded / {{ categories[state.cat].name }}
+
+  .section.bg-light.py-3
+    .container.h-100
+      .py-3(v-if="!userStore.getState().selectedAddress")
+        .col-12
+          .alert.alert-light.p-3.my-5
+            .text-center.h-100.flex-center
+              span.text-center.m-0
+                h5.appear(:style="[`--delay:${1}`]") Not Connected to Network
+                .appear(:style="[`--delay:${2}`]") Connect your wallet to use this application.
+
+      .row.g-4(v-else)
+        .col-12(v-if="!state.items.length")
+          .alert.alert-light.p-3.my-5
+            .text-center.h-100.flex-center
+              span.text-center.m-0
+                h5.appear(:style="[`--delay:${1}`]") Nothing to show.
+                .appear(:style="[`--delay:${2}`]") Try changing the category or filters.
+
+        template(v-else)
+          .col-12
+            .row.g-3
+              .col-12.col-md-6.col-lg-4.col-xl-2(
+                v-for="(_, i) in Math.min(perPage, state.pendingCount)"
+              )
+                .border.rounded-1(
+                  v-if="!state.items[i]",
+                  :style="{ 'background-color': `rgba(0,0,0,0.1)`, 'background-image': `url( ${'/blank.png'} )` }"
+                )
+                  .card-block
+                    .square
+
+                .card.bg-cover.appear.hover-reveal(
+                  v-else,
+                  :style="{ 'background-image': `url('/blank.png')` }",
+                  @click="openItem(state.items[i].tokenId)"
+                )
+                  .card-block(
+                    :style="{ 'background-image': `url(${state.items[i]?.image})` }"
+                  )
+                    .pos-abs.badge.bg-dark.text-white.top.left.mx-n1.my-n1.appear(
+                      :style="`--delay: 1`"
+                    ) #[sup #]{{ state.items[i]?.tokenId }}
+
+                    .square.bg-white
+                      .inner
+                        .pos-rel.h-100
+                          .align-self-start
+
+                          .position-absolute.bottom-0.w-100.py-2.d-flex.justify-content-between.reveal
+                            span.btn-group.btn-group-sm.mx-auto.text-nowrap
+                              span.btn.btn-white(
+                                :style="`--delay: 0`",
+                                @click.stop=""
+                              ) #[strong 0.02] #[sup ETH]
+
+                              span.reveal.btn.btn-white.text-danger(
+                                @click.stop="likeItem(state.items[i])",
+                                :style="`--delay: 0`"
+                              )
+                                small: i.fa.fa-fw.fa-heart
+                                strong {{ state.items[i].likes || 0 }}
+
+          .col-12
+            .row
+              .mx-auto.col-auto
+                nav.btn-toolbar.align-items-center
+                  ul.pagination.m-0
+                    li.page-item(v-if="currentPage > 0"): a.page-link(
+                      @click="router.replace({ query: { ...route.query, page: currentPage - 1 } })"
+                    ) #[i.fa.fa-fw.fa-chevron-left]
+
+                    li.page-item(
+                      v-for="page in showPages.pages",
+                      :class="[currentPage === page ? 'active' : '']"
+                    ): a.page-link(
+                      @click="router.replace({ query: { ...route.query, page: page + 1 } })"
+                    ) {{ page + 1 }}
+
+                    li.page-item(v-if="currentPage < showPages.max"): a.page-link(
+                      @click="router.replace({ query: { ...route.query, page: currentPage + 1 } })"
+                    ) #[i.fa.fa-fw.fa-chevron-right]
+
+.sidebar
+  SideBar(v-model:value="showMenu")
+    template(#menu)
+      .nav-pills
+        template(v-for="(cat, c) in categories")
+          a.nav-link(:class="{ active: state.cat === c }", @click="setCat(c)")
+            .row.g-3
+              .col-auto
+                BoolCheck(radio, :value="state.cat === c")
+              .col
+                span {{ cat.name }}
+                .badge.bg-primary {{ cat.count?.() }}
+
+  ModalBox(:value="state.activeToken", @close="state.activeToken = null")
+    template(#default="{ setOpen }")
+      .modal-body(v-if="state.activeToken")
+        .row.g-3
+          .col-4-md.col-12(v-if="state.activeToken?.image")
+            .square.bg-light
+              img.w-100(
+                :src="state.activeToken?.image",
+                @error="() => { if (state.activeToken) { state.activeToken.image = '/blank.png'; } }"
+              )
+          .col
+            h5 {{ state.activeToken.name }}
+
+            label Attributes
+            .list-group
+              .list-group-item.overflow-hidden
+                small Owner
+                div
+                a(
+                  :href="`https://etherscan.io/address/${state.activeToken.owner}`",
+                  target="_blank"
+                ) {{ state.activeToken.owner }}
+
+      .modal-footer.p-2.text-left
+        small {{ `${WINDOW.location.protocol}//${WINDOW.location.host}${WINDOW.location.pathname}/#${state.activeToken?.tokenId}` }}
+</template>
+<style lang="scss" scoped>
+.nav-link {
+  user-select: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.badge {
+  z-index: 1000;
+}
+</style> -->

@@ -1,0 +1,144 @@
+---
+networks:
+  backend: 
+    driver: bridge
+  default:
+
+services:
+  game:
+    image: dreamers/game:dev
+    build:
+      context: ./Game
+      dockerfile: ./Dockerfile
+      target: development
+    ports:
+      - 30003:30003
+    expose:
+      - 30003
+    tty: true
+    restart: always 
+    volumes:
+      - ./Game/src:/app/src
+      - ./Game/go.mod:/app/go.mod
+      - ./Game/go.sum:/app/go.sum
+
+  backend:
+    labels:
+      kompose.service.type: LoadBalancer
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      target: development
+    depends_on:
+      - db
+      - redis
+      - game
+    env_file:
+      - ./.env.dev
+    environment:
+      NODE_ENV: development
+    expose:
+      - 30002
+      - 9229
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    image: dreamers/backend:dev
+    ports:
+      - '30002:30002'
+      - '9229:9229'
+    tty: true
+    volumes:
+      - ./Backend/static:/app/static
+      - ./Backend/src:/app/src
+      - ./Backend/package.json:/app/package.json
+      - ./Backend/yarn.lock:/app/yarn.lock
+      - ./Backend/tsconfig.json:/app/tsconfig.json
+      
+  # contract:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./Contract/Dockerfile
+  #     target: start
+  #   env_file:
+  #     - ./.env.dev
+  #   environment:
+  #     NODE_ENV: development
+  #     HARDHAT_NETWORK: hardhat
+  #   expose:
+  #     - 8545
+  #   image: dreamers/contract:test
+  #   ports:
+  #     - '8545:8545'
+  #   restart: always
+  #   tty: true
+  #   volumes:
+  #     - ./Contract/package.json:/app/Contract/package.json
+  #     - ./Contract/tsconfig.json:/app/Contract/tsconfig.json
+  #     - ./Contract/hardhat.config.ts:/app/Contract/hardhat.config.ts
+  #     - ./Contract/contracts:/app/Contract/contracts
+  #     - ./Contract/deploy:/app/Contract/deploy
+  #     - ./Contract/scripts:/app/Contract/scripts
+  #     - ./Contract/test:/app/Contract/test
+  #     - ./Contract/utils:/app/Contract/utils
+  #     - ./Contract/abis:/app/Contract/abis
+
+  db:
+    env_file:
+      - ./.env.dev
+    expose:
+      - 27017
+    ports:
+      - 27017:27017
+    healthcheck:
+      interval: 1m30s
+      retries: 5
+      start_period: 30s
+      test: echo 'db.stats().ok' | mongo mongodb://127.0.0.1:27017 --quiet
+      timeout: 30s
+    image: mongo:4.4
+    restart: always
+    tty: true
+    volumes:
+      - db-data:/data/db
+      - ./Database:/host
+  frontend:
+    labels:
+      kompose.service.type: LoadBalancer
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: development
+      target: development
+    image: dreamers/frontend:dev
+    environment:
+      NODE_ENV: development
+    ports:
+      - '30000:30000'
+    restart: always
+    tty: true
+    volumes:
+      - ./Frontend/src:/app/src
+      - ./Frontend/public:/app/public
+      - ./Frontend/index.html:/app/index.html
+      - ./Frontend/typechain:/app/typechain
+      - ./Frontend/package.json:/app/package.json
+      - ./Frontend/vite.config.ts:/app/vite.config.ts
+      - ./Frontend/tsconfig.json:/app/tsconfig.json
+  redis:
+    command: '--save 60 1'
+    expose:
+      - 6379
+    image: redis:6.2.6-alpine
+    restart: always
+    tty: true
+    volumes:
+      - redis-data:/data
+version: '3.8'
+volumes:
+  db-data:
+    external: true
+  hardhat-artifacts: null
+  hardhat-cache: null
+  hardhat-deployments: null
+  redis-data: null

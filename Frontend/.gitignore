@@ -1,0 +1,12 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+src/proto
+*.log
+*.eslintrc-auto-import.json
+.vite-ssg-temp
+stats.html
+/public/docs
+/typechain

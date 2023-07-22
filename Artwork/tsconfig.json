@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "importHelpers": true,
+    "lib": [
+      "ES2015",
+      "ESNext",
+      "DOM"
+    ],
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strict": true,
+    // "typeRoots": [
+    //   "./node_modules",
+    // ],
+    "types": [
+      "@types/node",
+    ]
+  },
+  "extends": "@tsconfig/node16/tsconfig.json",
+  "include": [
+    "./src/**/*.ts",
+    "./src/**/*.d.ts",
+    "./src/**/*.js"
+  ],
+  
+  // "typeAcquisition": {
+  //   "enable": true,
+  // },
+}

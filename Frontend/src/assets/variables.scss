@@ -1,0 +1,167 @@
+@use "sass:color";
+
+@import "~bootstrap/scss/functions";
+
+$contrast-ratio: 10;
+
+$font-family-base: "Roboto", sans-serif;
+
+$font-family-monospace: "JetBrains Mono", monospace;
+
+// $font-family: 'Chau Philomene One';
+
+
+$spacer: 1.3rem;
+$spacers: (
+  0: 0,
+  1: $spacer * 0.25,
+  2: $spacer * 0.5,
+  3: $spacer,
+  4: $spacer * 2,
+  5: $spacer * 4,
+  6: $spacer * 8,
+  7: $spacer * 16,
+  8: $spacer * 32,
+);
+
+
+// $modal-inner-padding:  map-get($spacers, 2);
+// $modal-header-padding: map-get($spacers, 3);
+
+$black: hsl(0, 0%, 0.6%);
+$white: hsl(184, 0%, 99.9%);
+$primary: hsl(184, 100%, 20%);
+$secondary: hsl(196, 25%, 35%);
+$info: hsl(194, 38%, 50%);
+$success: hsl(147, 37%, 43%);
+$warning: hsl(52, 72%, 46%);
+$danger: hsl(358, 59%, 47%);
+$accent1: hsl(334, 5%, 26%);
+$accent2: hsl(20, 24%, 49%);
+$accent3: hsl(0, 0%, 66%);
+$dark: color.change($primary, $saturation: 10%, $lightness: 20%);
+$dark1: color.change($primary, $saturation: 10%, $lightness: 10%);
+$dark2: color.change($primary, $saturation: 10%, $lightness: 5%);
+$light: color.change($primary, $saturation: 10%, $lightness: 90%);
+$light1: color.change($primary, $saturation: 10%, $lightness: 94%);
+$light2: color.change($primary, $saturation: 10%, $lightness: 96%);
+
+$theme-colors: (
+  "white": $white,
+  "light": $light,
+  "light1": $light1,
+  "light2": $light2,
+  "black": $black,
+  "dark": $dark,
+  "dark1": $dark1,
+  "dark2": $dark2,
+  "primary": $primary,
+  "secondary": $secondary,
+  "info": $info,
+  "success": $success,
+  "warning": $warning,
+  "danger": $danger,
+  "accent1": $accent1,
+  "accent2": $accent2,
+  "accent3": $accent3,
+);
+
+$modal-inner-padding: map-get($spacers, 3);
+$modal-dialog-margin: map-get($spacers, 1);
+$modal-header-padding: map-get($spacers, 3);
+$zindex-dropdown: 6000;
+$zindex-modal: 5000;
+$zindex-popover: 3000;
+$zindex-sticky: 1000;
+
+$body-color: hsl(0, 0%, 25%);
+$body-bg: color.change($primary, $saturation: 0%, $lightness: 99%);
+$active-bg: $secondary;
+$nav-pills-link-active-bg: $secondary;
+$border-radius: 0.5rem;
+$border-radius-sm: $border-radius * 0.75;
+$border-radius-lg: $border-radius * 1.5;
+$input-focus-border-color: none;
+$input-focus-bg: $white;
+
+$container-padding-x: map-get($spacers, 3);
+$container-padding-y: map-get($spacers, 1);
+
+$progress-height: 1rem;
+$progress-bar-color: $black;
+
+
+$list-group-item-padding-y:         $spacer;
+$list-group-item-padding-x:         $spacer;
+$input-bg: $white;
+
+$input-bg: inherit;
+$border-color: hsla(0, 0%, 0%, 0.2);
+$border-width: 2px;
+$badge-font-size: 0.9em;
+$badge-color: black;
+$card-border-color: $border-color;
+$dropdown-min-width: 25rem;
+$dropdown-item-padding-x: map-get($spacers, 3);
+$dropdown-item-padding-y: map-get($spacers, 3) * 0.75;
+$dropdown-border-color: $border-color;
+$accordion-border-color: $border-color;
+$table-border-color: $border-color;
+$input-border-color: $border-color;
+$popover-border-color: $border-color;
+$btn-border-width: $border-width;
+$nav-tabs-border-color: $border-color;
+$list-group-border-color: $border-color;
+$input-group-addon-border-color: $border-color;
+
+$nav-link-padding-x: map-get($spacers, 0);
+$navbar-nav-link-padding-x: map-get($spacers, 0);
+
+$box-shadow-sm: 0px 0.5rem 1.0rem -1.0rem hsla(0, 0%, 0%, 0.3);
+$box-shadow:    0px 1.1rem 1.5rem -1.5rem hsla(0, 0%, 0%, 0.4);
+$box-shadow-lg: 0px 1.2rem 2.0rem -1.7rem hsla(0, 0%, 0%, 0.5);
+
+// $btn-hover-bg-shade-amount: 2;
+$btn-hover-bg-shade-amount: 0.5;
+$btn-hover-border-shade-amount: 1;
+
+$dropdown-padding-y: 0;
+$dropdown-box-shadow: $box-shadow;
+
+$card-box-shadow: $box-shadow;
+$btn-box-shadow: $box-shadow-sm;
+$btn-active-border-shade-amount: 0.5;
+
+$enable-reduced-motion: false;
+$enable-smooth-scroll: true;
+$enable-shadows: false;
+$enable-negative-margins: true;
+$input-group-addon-border-color: $border-color;
+$enable-button-pointers: false;
+
+$avatar-size-base: 2rem;
+$min-contrast-ratio: 2;
+
+@import "~bootstrap/scss/variables";
+@import "~bootstrap/scss/maps";
+@import "~bootstrap/scss/mixins";
+@import "~bootstrap/scss/utilities";
+
+$avatar-size-xxs: $avatar-size-base  !default;
+$avatar-size-xs: $avatar-size-base  !default;
+$avatar-size-sm: $avatar-size-base  !default;
+$avatar-size-lg: $avatar-size-base  !default;
+$avatar-size-xl: $avatar-size-base  !default;
+$avatar-size-xxl: $avatar-size-base  !default;
+$avatar-size-md: $avatar-size-base  !default;
+
+$modal-header-border-color: transparent;
+$modal-footer-border-color: transparent;
+
+$avatar-size-xxs: 0.5rem;
+$avatar-size-xs: 0.75rem;
+$avatar-size-sm: 1rem;
+$avatar-size-md: 1.25rem;
+$avatar-size-lg: 1.5rem;
+$avatar-size-xl: 2rem;
+$avatar-size-xxl: 3rem;
